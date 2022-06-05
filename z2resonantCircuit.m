@@ -26,7 +26,7 @@ function [R, L, C] = z2resonantCircuit(varargin)
        		for k=2:length(z) 
                 if fc==0
                     if ((x(k)>0)&&(x(k-1)<0))||((x(k)<0)&&(x(k-1)>0))
-                        fc=freq(k);
+                        fc=freq(k)
                         zc=z(k);
                         pos=k;
                         type='yresonant';
@@ -47,21 +47,28 @@ function [R, L, C] = z2resonantCircuit(varargin)
  
      		syms L C
         	eq1=fc==1/(2*pi*sqrt(L*C));
-            %eq2=x2==2*pi*f2*L-(1/(2*pi*f2*C));
-             
-            % for parallel 
-            XC=-1/(2*pi*C);
-            XL=2*pi*L;
-            Z1=R*XC/(R+XC);
-            Z2=Z1*XL/(Z1+XL);
-            eq2=x2==imag(Z2);
-            %}   
-            assume(L>0)
-            assume(C>0)
+            
+            if (nargin>2)&&(length(varargin{3})==1)&&(varargin{3}=='P')
+                eq2=x2==(2*pi*f2*L)*(-1/(2*pi*f2*C))/(2*pi*f2*L-(1/(2*pi*f2*C)));
+                circ='P';
+            else
+                eq2=x2==2*pi*f2*L-(1/(2*pi*f2*C));
+                circ='S';
+            end
+            
+            % Intento 4 (resistance model)
+            
+            %eq1=(2*pi*fc)^2*L*C==1/(1+(1/((2*pi*fc*C*R)^2))); % Resonance changes
+            %eq2=x2==(-1/(2*pi*f2*C))*R^2/(R^2+(1/(2*pi*f2*C))^2)+2*pi*f2*L;
+            %}
+            assume(L>0);
+            assume(C>0);
             S=solve([eq1,eq2], [L,C],'ReturnConditions',true);
+            %S=solve([eq1,eq2], [L,C]);
+            
             L=double(S.L);
             C=double(S.C);
-            
+           
         else
             fprintf('No resonant')
             % The circuit doesn't have resonance in the freq range
@@ -89,12 +96,14 @@ function [R, L, C] = z2resonantCircuit(varargin)
         
         [aux1, aux2, aux3]=deal(R, L, C);
         
-        if nargin==3
-            if varargin{3}~='no print'
-                fprintf('The third parameter must be "no print" to keep the function from printing in console')
-            end
+        if (nargin==3)&&(length(varargin{3})==8)&&varargin{3}~='no print'
+            fprintf('The third parameter must be "no print" to keep the function from printing in console')
         else
-            fprintf('\nSeries resonant circuit found:\n')
+            if circ=='S'
+                fprintf('\nSeries resonant circuit found:\n')
+            elseif circ=='P'
+                fprintf('\nResistance in series with parallel capacitor and inductor circuit found:\n')
+            end
             fprintf('R=%g, L=%g, C=%g\n', R, L, C)
         end
         %}
