@@ -32,10 +32,10 @@ function [R, L, C] = z2resonantCircuit(varargin)
                         type='yresonant';
                     end
                 end
-                %type
             end
         end
         if type=='yresonant'
+            R=abs(real(zc));
             if fc<freq(ceil(length(freq)/2))
                 f2=freq(pos+ceil(length(freq)/5));
                 x2=x(pos+ceil(length(freq)/5));
@@ -47,17 +47,23 @@ function [R, L, C] = z2resonantCircuit(varargin)
  
      		syms L C
         	eq1=fc==1/(2*pi*sqrt(L*C));
-            eq2=x2==2*pi*f2*L-(1/(2*pi*f2*C));
-            % for parallel eq2=x2==(2*pi*f2*L)*(1/(2*pi*f2*C))/((2*pi*f2*L)+(1/(2*pi*f2*C)));
-     
+            %eq2=x2==2*pi*f2*L-(1/(2*pi*f2*C));
+             
+            % for parallel 
+            XC=-1/(2*pi*C);
+            XL=2*pi*L;
+            Z1=R*XC/(R+XC);
+            Z2=Z1*XL/(Z1+XL);
+            eq2=x2==imag(Z2);
+            %}   
             assume(L>0)
             assume(C>0)
             S=solve([eq1,eq2], [L,C],'ReturnConditions',true);
             L=double(S.L);
             C=double(S.C);
-            R=abs(real(zc));
             
         else
+            fprintf('No resonant')
             % The circuit doesn't have resonance in the freq range
             f1=freq(ceil(length(freq)/3));
             x1=x(ceil(length(freq)/3));
