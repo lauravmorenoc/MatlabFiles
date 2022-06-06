@@ -37,8 +37,8 @@ function [R, L, C] = z2resonantCircuit(varargin)
         if type=='yresonant'
             R=abs(real(zc));
             if fc<freq(ceil(length(freq)/2))
-                f2=freq(pos+ceil(length(freq)/5));
-                x2=x(pos+ceil(length(freq)/5));
+                f2=freq(pos+ceil(length(freq)/2));
+                x2=x(pos+ceil(length(freq)/2));
             else
                 f2=freq(pos-ceil(length(freq)/5));
                 x2=x(pos-ceil(length(freq)/5));
@@ -48,26 +48,40 @@ function [R, L, C] = z2resonantCircuit(varargin)
      		syms L C
         	eq1=fc==1/(2*pi*sqrt(L*C));
             
-            if (nargin>2)&&(length(varargin{3})==1)&&(varargin{3}=='P')
+            if (nargin>2)&&(length(varargin{3})==1)&&(varargin{3}=='X')
                 eq2=x2==(2*pi*f2*L)*(-1/(2*pi*f2*C))/(2*pi*f2*L-(1/(2*pi*f2*C)));
+                circ='X';
+            elseif (nargin>2)&&(length(varargin{3})==1)&&(varargin{3}=='R') % Resistance model
+                eq1=(2*pi*fc)^2*L*C==1/(1+(1/((2*pi*fc*C*R)^2))); % Resonance changes
+                eq2=x2==(-1/(2*pi*f2*C))*R^2/(R^2+(1/(2*pi*f2*C))^2)+2*pi*f2*L;
+                circ='R';
+            elseif (nargin>2)&&(length(varargin{3})==1)&&(varargin{3}=='A')
+                eq1=(2*pi*fc)^2*L*C==((2*pi*fc*L)^2+R^2)/(R^2); % Resonance changes
+                eq2=x2==(-1/(2*pi*f2*C))+2*pi*f2*L*R^2/(R^2+(2*pi*f2*L)^2);
+                %eq=x2==(-1/(2*pi*f2*C))*R^2/(R^2+(1/(2*pi*f2*C))^2);
+                circ='A';
+            elseif (nargin>2)&&(length(varargin{3})==1)&&(varargin{3}=='P')
+                XC=-1/(2*pi*f2*C);
+                XL=2*pi*f2*L;
+                Z1=XL*XC/(XL+XC);
+                Z2=Z1*R/(Z1+R);
+                eq2=x2==imag(Z2);
                 circ='P';
             else
                 eq2=x2==2*pi*f2*L-(1/(2*pi*f2*C));
                 circ='S';
             end
             
-            % Intento 4 (resistance model)
             
-            %eq1=(2*pi*fc)^2*L*C==1/(1+(1/((2*pi*fc*C*R)^2))); % Resonance changes
-            %eq2=x2==(-1/(2*pi*f2*C))*R^2/(R^2+(1/(2*pi*f2*C))^2)+2*pi*f2*L;
-            %}
             assume(L>0);
             assume(C>0);
             S=solve([eq1,eq2], [L,C],'ReturnConditions',true);
-            %S=solve([eq1,eq2], [L,C]);
+            %S=solve(eq, C,'ReturnConditions',true);
             
-            L=double(S.L);
-            C=double(S.C);
+            L=subs(S.L);
+            %L=0;
+            C=subs(S.C);
+            
            
         else
             fprintf('No resonant')
@@ -101,8 +115,14 @@ function [R, L, C] = z2resonantCircuit(varargin)
         else
             if circ=='S'
                 fprintf('\nSeries resonant circuit found:\n')
-            elseif circ=='P'
+            elseif circ=='X'
                 fprintf('\nResistance in series with parallel capacitor and inductor circuit found:\n')
+            elseif circ=='R'
+                fprintf('\nInductor in series with parallel capacitor and resistor circuit found:\n')
+            elseif circ=='P'
+                fprintf('\nRLC parallel circuit found:\n')
+            elseif circ=='A'
+                fprintf('\nCapacitor in series with parallel inductor and resistor circuit found:\n')
             end
             fprintf('R=%g, L=%g, C=%g\n', R, L, C)
         end
